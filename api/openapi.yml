@@ -1,0 +1,176 @@
+openapi: 3.0.3
+info:
+  title: Queue Service
+  version: 1.0.0
+tags:
+  - name: Queue
+  - name: Task
+components:
+  parameters:
+    QueueName:
+      name: queueName
+      in: path
+      required: true
+      schema:
+        type: string
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: X-IdempotencyKey
+      in: header
+      required: false
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                nullable: true
+              fields:
+                type: array
+                nullable: true
+                items:
+                  type: object
+                  required:
+                  - name
+                  - reason
+                  properties:
+                    name:
+                      type: string
+                      description: field name
+                    reason:
+                      type: string
+                      enum:
+                      - EMPTY
+                      - TOO_LARGE
+                      - TOO_SMALL
+                      - INVALID
+                    message:
+                      type: string
+                      nullable: true
+    InternalError:
+      description: Internal error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                nullable: true
+  schemas:
+    Task:
+      type: object
+      required:
+      - id
+      - payload
+      - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        payload:
+          type: string
+          description: Base64-encoded payload
+        createdAt:
+          type: string
+          format: date-time
+    PushRequest:
+      type: object
+      required:
+      - payload
+      properties:
+        payload:
+          type: string
+          description: Base64-encoded payload
+paths:
+  /v1/queues/{queueName}/push:
+    post:
+      summary: Push a new task to queue
+      operationId: v1QueuePush
+      tags: [Queue]
+      parameters:
+      - $ref: '#/components/parameters/QueueName'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushRequest'
+      responses:
+        201:
+          description: Task created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task:
+                    $ref: '#/components/schemas/Task'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        500:
+          $ref: '#/components/responses/InternalError'
+  /v1/queues/{queueName}/pop:
+    post:
+      summary: Pop a task for processing
+      operationId: v1QueuePop
+      tags: [Queue]
+      parameters:
+      - $ref: '#/components/parameters/QueueName'
+      responses:
+        200:
+          description: Got a task for processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task:
+                    $ref: '#/components/schemas/Task'
+        204:
+          description: No task for processing
+        500:
+          $ref: '#/components/responses/InternalError'
+  /v1/tasks/{taskId}/ack:
+    post:
+      summary: Task acknowledgement
+      operationId: v1TaskAck
+      tags: [Task]
+      parameters:
+      - $ref: '#/components/parameters/TaskId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        204:
+          description: No Content. Task acknowledgement completed
+        400:
+          $ref: '#/components/responses/BadRequest'
+        500:
+          $ref: '#/components/responses/InternalError'
+  /v1/tasks/{taskId}/nack:
+    post:
+      summary: Task negative acknowledgement
+      operationId: v1TaskNack
+      tags: [Task]
+      parameters:
+      - $ref: '#/components/parameters/TaskId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        204:
+          description: No Content. Task negative acknowledgement completed
+        400:
+          $ref: '#/components/responses/BadRequest'
+        500:
+          $ref: '#/components/responses/InternalError'
