@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	_, appCtxCancel = context.WithCancel(context.Background())
+	appCtx, appCtxCancel = context.WithCancel(context.Background())
 
 	logger     log.Logger
 	baseLogger log.Logger
@@ -98,7 +98,12 @@ func setup() error {
 	httpendpoints.RegisterV1QueuesPush(httpRouter, queueService, baseLogger)
 	httpendpoints.RegisterV1TasksAck(httpRouter, taskService, baseLogger)
 	httpendpoints.RegisterV1TasksNack(httpRouter, taskService, baseLogger)
-	httpServer = &http.Server{Handler: httpRouter.Mux}
+	httpServer = &http.Server{
+		Handler: httpRouter.Mux,
+		BaseContext: func(l net.Listener) context.Context {
+			return appCtx
+		},
+	}
 
 	return nil
 }

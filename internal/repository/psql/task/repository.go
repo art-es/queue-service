@@ -34,8 +34,8 @@ func (r *Repository) GetFirstPending(ctx context.Context, queueName string) (*do
 			queue_name = $1 
 			AND (
 				status = 'pending'
-				OR (status = 'processing' AND locked_until <= current_timestamp)
-				OR (status = 'failed' AND locked_until <= current_timestamp)
+				OR (status = 'processing' AND locked_until <= now())
+				OR (status = 'failed' AND locked_until <= now())
 			)
 		ORDER BY created_at ASC
 		LIMIT 1
@@ -56,7 +56,7 @@ func (r *Repository) GetProcessingWithID(ctx context.Context, id string) (*domai
 		WHERE 
 			id = $1 
 			AND status = 'processing'
-			AND locked_until > current_timestamp
+			AND locked_until > now()
 		FOR UPDATE NOWAIT`
 
 	return getTask(exec, ctx, query, []any{id})
@@ -73,7 +73,7 @@ func (r *Repository) Complete(ctx context.Context, id string) error {
 		WHERE
 			id = $1
 			AND status = 'processing'
-			AND locked_until > current_timestamp`
+			AND locked_until > now()`
 
 	_, err = exec.Exec(ctx, query, id)
 	if err != nil {
