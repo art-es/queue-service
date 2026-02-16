@@ -36,7 +36,7 @@ var (
 
 func main() {
 	baseLogger = logimpl.NewLogger(initial.GetLogOptions()...)
-	logger = logger.With("module", "cmd/service")
+	logger = baseLogger.With("module", "cmd/service")
 
 	if err := setup(); err != nil {
 		logger.Log(log.LevelError).

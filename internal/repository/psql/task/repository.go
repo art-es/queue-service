@@ -161,14 +161,16 @@ func getTask(
 
 func toSQLDuration(in *time.Duration) *int64 {
 	if in != nil {
-		return ops.Pointer(int64(*in))
+		sec := in.Seconds()
+		return ops.Pointer(int64(sec))
 	}
 	return nil
 }
 
 func fromSQLDuration(in sql.NullInt64) *time.Duration {
 	if in.Valid {
-		return ops.Pointer(time.Duration(in.Int64))
+		sec := time.Duration(in.Int64)
+		return ops.Pointer(time.Second * sec)
 	}
 	return nil
 }

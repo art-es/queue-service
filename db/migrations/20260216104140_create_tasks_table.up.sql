@@ -14,4 +14,3 @@ CREATE INDEX idx_tasks_pop
 ALTER TABLE tasks
     ADD CONSTRAINT status_check
     CHECK (status IN ('pending', 'processing', 'failed'));
-
