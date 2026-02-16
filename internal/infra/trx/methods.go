@@ -2,7 +2,6 @@ package trx
 
 import (
 	"context"
-	"fmt"
 )
 
 func Begin(ctx context.Context) context.Context {
@@ -54,19 +53,4 @@ func Commit(ctx context.Context) error {
 		return tx.commit()
 	}
 	return nil
-}
-
-func Do(ctx context.Context, fn func(ctx context.Context) error) (outErr error, rbErr error) {
-	ctx = Begin(ctx)
-
-	if outErr = fn(ctx); outErr != nil {
-		rbErr = Rollback(ctx)
-		return
-	}
-
-	if outErr = Commit(ctx); outErr != nil {
-		outErr = fmt.Errorf("commit trx: %w", outErr)
-	}
-
-	return
 }

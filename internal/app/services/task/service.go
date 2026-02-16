@@ -9,8 +9,7 @@ import (
 	"github.com/art-es/queue-service/internal/app/domain"
 	"github.com/art-es/queue-service/internal/app/repository"
 	"github.com/art-es/queue-service/internal/infra/log"
-	"github.com/art-es/queue-service/internal/infra/ops"
-	"github.com/art-es/queue-service/internal/infra/trx"
+	"github.com/art-es/queue-service/internal/infra/trx/trxutil"
 )
 
 type clock interface {
@@ -76,8 +75,7 @@ func (s *Service) Nack(ctx context.Context, taskID string, idempotencyKey *strin
 	}
 
 	now := s.clock.Now()
-
-	err, rbErr := trx.Do(ctx, func(ctx context.Context) error {
+	err := trxutil.DoOrLogError(s.logger, "task.nack", ctx, func(ctx context.Context) error {
 		task, err := s.taskRepository.GetProcessingWithID(ctx, taskID)
 		if err != nil {
 			if errors.Is(err, repository.ErrNotFound) {
@@ -96,7 +94,6 @@ func (s *Service) Nack(ctx context.Context, taskID string, idempotencyKey *strin
 		return nil
 	})
 	if err != nil {
-		s.handleRollbackError("rollback failed on nack", rbErr, err)
 		return err
 	}
 
@@ -104,14 +101,4 @@ func (s *Service) Nack(ctx context.Context, taskID string, idempotencyKey *strin
 		s.idempotencyKeyCache.SetTaskNack(*idempotencyKey)
 	}
 	return nil
-}
-
-func (s *Service) handleRollbackError(msg string, rbErr error, opErr error) {
-	if rbErr != nil {
-		s.logger.Log(log.LevelError).
-			With("message", msg).
-			With("rb_error", rbErr.Error()).
-			With("op_error", ops.ErrorMessage(opErr)).
-			Write()
-	}
 }

@@ -9,8 +9,7 @@ import (
 	"github.com/art-es/queue-service/internal/app/domain"
 	"github.com/art-es/queue-service/internal/app/repository"
 	"github.com/art-es/queue-service/internal/infra/log"
-	"github.com/art-es/queue-service/internal/infra/ops"
-	"github.com/art-es/queue-service/internal/infra/trx"
+	"github.com/art-es/queue-service/internal/infra/trx/trxutil"
 )
 
 type clock interface {
@@ -80,8 +79,7 @@ func (s *Service) Pop(ctx context.Context, queueName string) (*domain.Task, erro
 	var task *domain.Task
 
 	now := s.clock.Now()
-
-	err, rbErr := trx.Do(ctx, func(ctx context.Context) error {
+	err := trxutil.DoOrLogError(s.logger, "queue.pop", ctx, func(ctx context.Context) error {
 		var err error
 
 		task, err = s.taskRepository.GetFirstPending(ctx, queueName)
@@ -102,19 +100,8 @@ func (s *Service) Pop(ctx context.Context, queueName string) (*domain.Task, erro
 		return nil
 	})
 	if err != nil {
-		s.handleRollbackError("rollback failed on pop", rbErr, err)
 		return nil, err
 	}
 
 	return task, nil
-}
-
-func (s *Service) handleRollbackError(msg string, rbErr error, opErr error) {
-	if rbErr != nil {
-		s.logger.Log(log.LevelError).
-			With("message", msg).
-			With("rb_error", rbErr.Error()).
-			With("op_error", ops.ErrorMessage(opErr)).
-			Write()
-	}
 }
