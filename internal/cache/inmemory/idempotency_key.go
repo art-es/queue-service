@@ -2,6 +2,7 @@ package inmemory
 
 import "github.com/art-es/queue-service/internal/app/domain"
 
+// TODO: make concurrent safety
 type IdempotencyKeyCache struct {
 	mapQueuePush map[string]*domain.Task
 	mapTaskAck   map[string]struct{}

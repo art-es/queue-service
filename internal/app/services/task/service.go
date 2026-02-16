@@ -25,9 +25,8 @@ type idempotencyKeyCache interface {
 }
 
 type taskRepository interface {
+	Complete(ctx context.Context, id string) error
 	GetProcessingWithID(ctx context.Context, id string) (*domain.Task, error)
-	HasProcessingWithID(ctx context.Context, id string) (bool, error)
-	Delete(ctx context.Context, id string) error
 	Save(ctx context.Context, task *domain.Task) error
 }
 
@@ -59,23 +58,8 @@ func (s *Service) Ack(ctx context.Context, taskID string, idempotencyKey *string
 		}
 	}
 
-	err, rbErr := trx.Do(ctx, func(ctx context.Context) error {
-		has, err := s.taskRepository.HasProcessingWithID(ctx, taskID)
-		if err != nil {
-			return fmt.Errorf("check processing task by id existence: %w", err)
-		}
-
-		if has {
-			if err = s.taskRepository.Delete(ctx, taskID); err != nil {
-				return fmt.Errorf("delete task: %w", err)
-			}
-		}
-
+	if err := s.taskRepository.Complete(ctx, taskID); err != nil {
 		return nil
-	})
-	if err != nil {
-		s.handleRollbackError("rollback failed on ack", rbErr, err)
-		return err
 	}
 
 	if idempotencyKey != nil {

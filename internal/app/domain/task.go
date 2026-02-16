@@ -36,14 +36,14 @@ func NewTask(queueName, payload string) *Task {
 }
 
 func (t *Task) ToProcessing(now time.Time) {
-	t.Status = TaskStatusPending
+	t.Status = TaskStatusProcessing
 	t.LockedUntil = ops.Pointer(now.Add(taskProcessingTimeout))
 }
 
 func (t *Task) ToFailed(now time.Time) {
 	lockDuration := taskFirstFailTimeout
 	if t.LastFailDuration != nil {
-		lockDuration = *t.LastFailDuration
+		lockDuration = *t.LastFailDuration * 2
 	}
 
 	t.Status = TaskStatusFailed

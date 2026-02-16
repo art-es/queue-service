@@ -29,9 +29,15 @@ func (r *Repository) GetFirstPending(ctx context.Context, queueName string) (*do
 
 	query := `
 		SELECT id, queue_name, payload, status, created_at, locked_until, last_fail_duration
-		FROM tasks t
-		WHERE t.queue_name = $1 AND t.status = 'pending'
-		ORDER BY t.created_at ASC
+		FROM tasks
+		WHERE 
+			queue_name = $1 
+			AND (
+				status = 'pending'
+				OR (status = 'processing' AND locked_until <= current_timestamp)
+				OR (status = 'failed' AND locked_until <= current_timestamp)
+			)
+		ORDER BY created_at ASC
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED`
 
@@ -46,46 +52,31 @@ func (r *Repository) GetProcessingWithID(ctx context.Context, id string) (*domai
 
 	query := `
 		SELECT id, queue_name, payload, status, created_at, locked_until, last_fail_duration
-		FROM tasks t
-		WHERE t.id = $1 AND t.status = 'processing'
-		FOR UPDATE SKIP LOCKED`
+		FROM tasks
+		WHERE 
+			id = $1 
+			AND status = 'processing'
+			AND locked_until > current_timestamp
+		FOR UPDATE NOWAIT`
 
 	return getTask(exec, ctx, query, []any{id})
 }
 
-func (r *Repository) HasProcessingWithID(ctx context.Context, id string) (bool, error) {
-	exec, err := r.execGetter.Get(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	query := `
-		SELECT id
-		FROM tasks t
-		WHERE t.id = $1 AND t.status = 'processing'
-		FOR UPDATE SKIP LOCKED`
-
-	var foundID int
-	if err := exec.QueryRow(ctx, query, id).Scan(&foundID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, nil
-		}
-
-		return false, fmt.Errorf("execute sql query: %w", err)
-	}
-
-	return true, nil
-}
-
-func (r *Repository) Delete(ctx context.Context, id string) error {
+func (r *Repository) Complete(ctx context.Context, id string) error {
 	exec, err := r.execGetter.Get(ctx)
 	if err != nil {
 		return err
 	}
 
-	query := "DELETE FROM tasks WHERE id = $1"
+	query := `
+		DELETE FROM tasks
+		WHERE
+			id = $1
+			AND status = 'processing'
+			AND locked_until > current_timestamp`
 
-	if _, err = exec.Exec(ctx, query, id); err != nil {
+	_, err = exec.Exec(ctx, query, id)
+	if err != nil {
 		return fmt.Errorf("execute sql query: %w", err)
 	}
 

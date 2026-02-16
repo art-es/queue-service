@@ -58,8 +58,7 @@ func NewService(
 
 func (s *Service) Push(ctx context.Context, req *PushRequest) (*domain.Task, error) {
 	if req.IdempotencyKey != nil {
-		task, ok := s.idempotencyKeyCache.GetQueuePush(*req.IdempotencyKey)
-		if !ok {
+		if task, ok := s.idempotencyKeyCache.GetQueuePush(*req.IdempotencyKey); ok {
 			return task, nil
 		}
 	}

@@ -30,7 +30,7 @@ type CommonResponseBodyField struct {
 }
 
 func WriteInvalidRequestBody(ctx Context) {
-	WriteBadRequest(ctx, "Invalid request body content type")
+	WriteBadRequest(ctx, "Invalid request body")
 }
 
 func WriteBadRequest(ctx Context, msg string) {
@@ -53,15 +53,15 @@ func WriteInternalError(ctx Context) {
 
 func Write(ctx Context, code int, body any) {
 	w := ctx.ResponseWriter()
-	w.WriteHeader(code)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(body)
 }
 
 func WriteEmpty(ctx Context, code int) {
 	w := ctx.ResponseWriter()
-	w.WriteHeader(code)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
 	w.Write([]byte("{}"))
 }
 
