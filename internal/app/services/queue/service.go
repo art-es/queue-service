@@ -1,3 +1,4 @@
+//go:generate mockgen -source=service.go -destination=service_mock_test.go -package=$GOPACKAGE
 package queue
 
 import (
@@ -27,9 +28,9 @@ type taskRepository interface {
 }
 
 type PushRequest struct {
-	IdempotencyKey *string
 	QueueName      string
 	Payload        string
+	IdempotencyKey *string
 }
 
 type Service struct {
