@@ -1,3 +1,4 @@
+//go:generate mockgen -source=service.go -destination=service_mock_test.go -package=$GOPACKAGE
 package task
 
 import (
@@ -42,6 +43,8 @@ func NewService(
 	taskRepository taskRepository,
 	logger log.Logger,
 ) *Service {
+	logger = logger.With("module", "internal/app/services/task")
+
 	return &Service{
 		clock:               clock,
 		idempotencyKeyCache: idempotencyKeyCache,
@@ -58,7 +61,7 @@ func (s *Service) Ack(ctx context.Context, taskID string, idempotencyKey *string
 	}
 
 	if err := s.taskRepository.Complete(ctx, taskID); err != nil {
-		return nil
+		return fmt.Errorf("complete task: %w", err)
 	}
 
 	if idempotencyKey != nil {
@@ -82,7 +85,7 @@ func (s *Service) Nack(ctx context.Context, taskID string, idempotencyKey *strin
 				return nil
 			}
 
-			return fmt.Errorf("check processing task by id existence: %w", err)
+			return fmt.Errorf("get processing task: %w", err)
 		}
 
 		task.ToFailed(now)
