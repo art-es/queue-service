@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/art-es/queue-service/internal/app/domain/consumer"
+	"github.com/art-es/queue-service/internal/app/services/consumer/dto"
 )
 
 type writer struct{}
@@ -14,15 +14,15 @@ func newWriter() *writer {
 	return &writer{}
 }
 
-func (*writer) Write(w io.Writer, msg *consumer.Message) error {
+func (*writer) Write(w io.Writer, msg *dto.Message) error {
 	var (
 		msgType     = uint8(msg.Type)
 		msgData any = nil
 	)
 
 	switch msg.Data.(type) {
-	case consumer.MessageDataTask:
-		msgData = convertToBinaryTask(msg.Data.(consumer.MessageDataTask))
+	case dto.MessageDataTask:
+		msgData = convertToBinaryTask(msg.Data.(dto.MessageDataTask))
 	}
 
 	if err := binary.Write(w, binary.BigEndian, msgType); err != nil {

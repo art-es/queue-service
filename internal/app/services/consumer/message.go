@@ -4,14 +4,15 @@ import (
 	"context"
 
 	"github.com/art-es/queue-service/internal/app/domain"
-	"github.com/art-es/queue-service/internal/app/domain/consumer"
+	"github.com/art-es/queue-service/internal/app/services/consumer/dto"
 	"github.com/art-es/queue-service/internal/infra/log"
 )
 
 type messageHandler struct {
 	queueService queueService
 	taskService  taskService
-	listenTasks  func(ctx context.Context, tasks <-chan *domain.Task, out chan<- *consumer.Message)
+	listenTasks  func(ctx context.Context, tasks <-chan *domain.Task, out chan<- *dto.Message)
+	closeConn    func()
 	logger       log.Logger
 }
 
@@ -28,19 +29,19 @@ func newMessageHandler(
 	}
 }
 
-func (h *messageHandler) handle(ctx context.Context, in *consumer.Message, out chan<- *consumer.Message) {
+func (h *messageHandler) handle(ctx context.Context, in *dto.Message, out chan<- *dto.Message) {
 	switch in.Type {
-	case consumer.InputTypeQueueSubscribe:
+	case dto.InputTypeQueueSubscribe:
 		h.handleQueueSubscribe(ctx, in, out)
-	case consumer.InputTypeTaskAck:
+	case dto.InputTypeTaskAck:
 		h.handleTaskAck(ctx, in, out)
-	case consumer.InputTypeTaskNack:
+	case dto.InputTypeTaskNack:
 		h.handleTaskNack(ctx, in, out)
 	}
 }
 
-func (h *messageHandler) handleQueueSubscribe(ctx context.Context, in *consumer.Message, out chan<- *consumer.Message) {
-	queueName, ok := in.Data.(consumer.MessageDataQueueName)
+func (h *messageHandler) handleQueueSubscribe(ctx context.Context, in *dto.Message, out chan<- *dto.Message) {
+	queueName, ok := in.Data.(dto.MessageDataQueueName)
 	if !ok {
 		return
 	}
@@ -54,8 +55,8 @@ func (h *messageHandler) handleQueueSubscribe(ctx context.Context, in *consumer.
 			With("error", err.Error()).
 			Write()
 
-		out <- &consumer.Message{
-			Type: consumer.OutputTypeQueueSubscribePass,
+		out <- &dto.Message{
+			Type: dto.OutputTypeQueueSubscribePass,
 		}
 		return
 	}
@@ -64,15 +65,15 @@ func (h *messageHandler) handleQueueSubscribe(ctx context.Context, in *consumer.
 		With("message", "subscribed to queue chan").
 		Write()
 
-	out <- &consumer.Message{
-		Type: consumer.OutputTypeQueueSubscribeFail,
+	out <- &dto.Message{
+		Type: dto.OutputTypeQueueSubscribeFail,
 	}
 
 	go h.listenTasks(ctx, tasks, out)
 }
 
-func (h *messageHandler) handleTaskAck(ctx context.Context, in *consumer.Message, out chan<- *consumer.Message) {
-	taskID, ok := in.Data.(consumer.MessageDataTaskID)
+func (h *messageHandler) handleTaskAck(ctx context.Context, in *dto.Message, out chan<- *dto.Message) {
+	taskID, ok := in.Data.(dto.MessageDataTaskID)
 	if !ok {
 		return
 	}
@@ -84,19 +85,19 @@ func (h *messageHandler) handleTaskAck(ctx context.Context, in *consumer.Message
 			With("error", err.Error()).
 			Write()
 
-		out <- &consumer.Message{
-			Type: consumer.OutputTypeTaskAckFail,
+		out <- &dto.Message{
+			Type: dto.OutputTypeTaskAckFail,
 		}
 		return
 	}
 
-	out <- &consumer.Message{
-		Type: consumer.OutputTypeTaskAckPass,
+	out <- &dto.Message{
+		Type: dto.OutputTypeTaskAckPass,
 	}
 }
 
-func (h *messageHandler) handleTaskNack(ctx context.Context, in *consumer.Message, out chan<- *consumer.Message) {
-	taskID, ok := in.Data.(consumer.MessageDataTaskID)
+func (h *messageHandler) handleTaskNack(ctx context.Context, in *dto.Message, out chan<- *dto.Message) {
+	taskID, ok := in.Data.(dto.MessageDataTaskID)
 	if !ok {
 		return
 	}
@@ -108,13 +109,13 @@ func (h *messageHandler) handleTaskNack(ctx context.Context, in *consumer.Messag
 			With("error", err.Error()).
 			Write()
 
-		out <- &consumer.Message{
-			Type: consumer.OutputTypeTaskNackFail,
+		out <- &dto.Message{
+			Type: dto.OutputTypeTaskNackFail,
 		}
 		return
 	}
 
-	out <- &consumer.Message{
-		Type: consumer.OutputTypeTaskNackPass,
+	out <- &dto.Message{
+		Type: dto.OutputTypeTaskNackPass,
 	}
 }

@@ -1,6 +1,8 @@
 package binary
 
-import "github.com/art-es/queue-service/internal/app/domain/consumer"
+import (
+	"github.com/art-es/queue-service/internal/app/services/consumer/dto"
+)
 
 const (
 	sizeUUID      = 16
@@ -20,7 +22,7 @@ type messageDataTask struct {
 	CreatedAt [sizeDateTime]byte
 }
 
-func convertToBinaryTask(task consumer.MessageDataTask) messageDataTask {
+func convertToBinaryTask(task dto.MessageDataTask) messageDataTask {
 	return messageDataTask{
 		ID:        convertStringToUUIDBytes(task.ID),
 		Payload:   convertStringToLongBytes(task.Payload),

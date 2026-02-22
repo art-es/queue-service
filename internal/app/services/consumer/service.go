@@ -6,13 +6,13 @@ import (
 	"io"
 
 	"github.com/art-es/queue-service/internal/app/domain"
-	"github.com/art-es/queue-service/internal/app/domain/consumer"
+	"github.com/art-es/queue-service/internal/app/services/consumer/dto"
 	"github.com/art-es/queue-service/internal/infra/log"
 )
 
 type messageIO interface {
-	Read(r io.Reader) (*consumer.Message, error)
-	Write(w io.Writer, m *consumer.Message) error
+	Read(r io.Reader) (*dto.Message, error)
+	Write(w io.Writer, m *dto.Message) error
 }
 
 type queueService interface {
@@ -27,7 +27,7 @@ type taskService interface {
 type Service struct {
 	baseCtx context.Context
 	io      messageIO
-	handle  func(ctx context.Context, in *consumer.Message, outChan chan<- *consumer.Message)
+	handle  func(ctx context.Context, in *dto.Message, outChan chan<- *dto.Message)
 	logger  log.Logger
 }
 
@@ -57,7 +57,7 @@ func (s *Service) Consume(conn io.ReadWriteCloser) {
 	}
 	defer done()
 
-	ch := make(chan *consumer.Message, 1)
+	ch := make(chan *dto.Message, 1)
 
 	go func() {
 		defer done()
@@ -67,7 +67,7 @@ func (s *Service) Consume(conn io.ReadWriteCloser) {
 	s.read(ctx, conn, ch)
 }
 
-func (s *Service) read(ctx context.Context, r io.Reader, ch chan<- *consumer.Message) {
+func (s *Service) read(ctx context.Context, r io.Reader, ch chan<- *dto.Message) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -92,7 +92,7 @@ func (s *Service) read(ctx context.Context, r io.Reader, ch chan<- *consumer.Mes
 	}
 }
 
-func (h *Service) write(ctx context.Context, w io.Writer, ch <-chan *consumer.Message) {
+func (h *Service) write(ctx context.Context, w io.Writer, ch <-chan *dto.Message) {
 	for {
 		select {
 		case <-ctx.Done():

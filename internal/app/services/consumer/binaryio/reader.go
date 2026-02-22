@@ -4,13 +4,13 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/art-es/queue-service/internal/app/domain/consumer"
+	"github.com/art-es/queue-service/internal/app/services/consumer/dto"
 )
 
 const (
-	inputTypeQueueSubscribe = uint8(consumer.InputTypeQueueSubscribe)
-	inputTypeTaskAck        = uint8(consumer.InputTypeTaskAck)
-	inputTypeTaskNack       = uint8(consumer.InputTypeTaskNack)
+	inputTypeQueueSubscribe = uint8(dto.InputTypeQueueSubscribe)
+	inputTypeTaskAck        = uint8(dto.InputTypeTaskAck)
+	inputTypeTaskNack       = uint8(dto.InputTypeTaskNack)
 )
 
 type reader struct{}
@@ -19,7 +19,7 @@ func newReader() *reader {
 	return &reader{}
 }
 
-func (*reader) Read(r io.Reader) (*consumer.Message, error) {
+func (*reader) Read(r io.Reader) (*dto.Message, error) {
 	var msgType uint8
 	if err := binary.Read(r, binary.BigEndian, &msgType); err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func (*reader) Read(r io.Reader) (*consumer.Message, error) {
 	case inputTypeTaskAck, inputTypeTaskNack:
 		msgData, err = readTaskID(r)
 	default:
-		// TODO: add log
+		// unsupported type
 		return nil, nil
 	}
 
@@ -42,28 +42,28 @@ func (*reader) Read(r io.Reader) (*consumer.Message, error) {
 		return nil, err
 	}
 
-	return &consumer.Message{
-		Type: consumer.MessageType(msgType),
+	return &dto.Message{
+		Type: dto.MessageType(msgType),
 		Data: msgData,
 	}, nil
 }
 
-func readQueueName(r io.Reader) (consumer.MessageDataQueueName, error) {
+func readQueueName(r io.Reader) (dto.MessageDataQueueName, error) {
 	var val [256]byte
 	if err := binary.Read(r, binary.BigEndian, &val); err != nil {
 		return "", err
 	}
 
-	out := consumer.MessageDataQueueName(convertBinaryQueueName(val))
+	out := dto.MessageDataQueueName(convertBinaryQueueName(val))
 	return out, nil
 }
 
-func readTaskID(r io.Reader) (consumer.MessageDataTaskID, error) {
+func readTaskID(r io.Reader) (dto.MessageDataTaskID, error) {
 	var val [16]byte
 	if err := binary.Read(r, binary.BigEndian, &val); err != nil {
 		return "", err
 	}
 
-	out := consumer.MessageDataTaskID(convertBinaryTaskID(val))
+	out := dto.MessageDataTaskID(convertBinaryTaskID(val))
 	return out, nil
 }

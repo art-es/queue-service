@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/art-es/queue-service/internal/app/domain"
-	"github.com/art-es/queue-service/internal/app/domain/consumer"
+	"github.com/art-es/queue-service/internal/app/services/consumer/dto"
 )
 
-func listenTasks(ctx context.Context, tasks <-chan *domain.Task, out chan<- *consumer.Message) {
+func listenTasks(ctx context.Context, tasks <-chan *domain.Task, out chan<- *dto.Message) {
 	var task *domain.Task
 	for {
 		select {
@@ -16,9 +16,9 @@ func listenTasks(ctx context.Context, tasks <-chan *domain.Task, out chan<- *con
 		case task = <-tasks:
 		}
 
-		out <- &consumer.Message{
-			Type: consumer.OutputTypeTaskProcess,
-			Data: consumer.MessageDataTask{
+		out <- &dto.Message{
+			Type: dto.OutputTypeTaskProcess,
+			Data: dto.MessageDataTask{
 				ID:        task.ID,
 				Payload:   task.Payload,
 				CreatedAt: task.CreatedAt,
